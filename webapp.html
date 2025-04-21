@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Memory Match Game</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+      background: #e8f4f8;
+      margin: 0;
+      padding: 2rem;
+    }
+
+    h1 {
+      margin-bottom: 1rem;
+      color: #333;
+    }
+
+    #timer, #mistakes {
+      font-size: 1.2rem;
+      margin: 10px;
+      color: #333;
+    }
+
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(4, 100px);
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      width: 100px;
+      height: 100px;
+      background-color: #1e90ff;
+      color: white;
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 10px;
+      user-select: none;
+      position: relative;
+      transition: transform 0.3s, background-color 0.3s;
+      border: 3px solid transparent;
+    }
+
+    .card.flipped {
+      background-color: #ffffff;
+      color: #333;
+      border-color: red;
+    }
+
+    .card.matched {
+      background-color: #90ee90;
+      color: #333;
+      border-color: transparent;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      background-color: #1e90ff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 10px;
+    }
+
+    button:hover {
+      background-color: #0f70d4;
+    }
+
+    #leaderboard {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background-color: #ffffffcc;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      text-align: left;
+      z-index: 1000;
+    }
+
+    #leaderboard h2 {
+      margin-top: 0;
+      font-size: 1rem;
+    }
+
+    #leaderboard li {
+      list-style-type: none;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="leaderboard">
+    <h2>Leaderboard Times</h2>
+    <ul id="leaderboard-list"></ul>
+  </div>
+
+  <h1>Memory Match Game</h1>
+  <div id="timer">Time: 00:00</div>
+  <div id="mistakes">Mistakes: 0 / 30
+  </div>
+  <div id="game-board"></div>
+  <button onclick="startGame()">Play Again</button>
+  <button onclick="peekCards()">Peek (1x use)</button>
+
+  <script>
+    const cardSymbols = ['🍎', '🍌', '🍇', '🍒', '🍊', '🍍', '🍓', '🍑'];
+    let cards = [];
+    let firstCard = null;
+    let secondCard = null;
+    let lockBoard = false;
+    let timerInterval;
+    let startTime;
+    let elapsedTime = 0;
+    let bestTimes = JSON.parse(localStorage.getItem('bestTimes')) || [];
+    let mistakeCount = 0;
+    let peekUsed = false;
+    const maxMistakes = 30;
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function createCardElement(symbol, index) {
+      const div = document.createElement('div');
+      div.classList.add('card');
+      div.dataset.symbol = symbol;
+      div.dataset.index = index;
+      div.textContent = '';
+      div.addEventListener('click', flipCard);
+      return div;
+    }
+
+    function startGame() {
+      const board = document.getElementById('game-board');
+      board.innerHTML = '';
+      cards = [];
+
+      const symbols = [...cardSymbols, ...cardSymbols]; // 8 pairs = 16 cards
+      shuffle(symbols);
+
+      symbols.forEach((symbol, index) => {
+        const card = createCardElement(symbol, index);
+        cards.push(card);
+        board.appendChild(card);
+      });
+
+      firstCard = null;
+      secondCard = null;
+      lockBoard = false;
+      mistakeCount = 0;
+      peekUsed = false;
+
+      document.getElementById('mistakes').textContent = `Mistakes: 0 / ${maxMistakes}`;
+      document.getElementById('timer').textContent = 'Time: 00:00';
+      if (timerInterval) clearInterval(timerInterval);
+      startTime = Date.now();
+      timerInterval = setInterval(updateTimer, 1000);
+
+      showLeaderboard();
+    }
+
+    function updateTimer() {
+      elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+      const minutes = Math.floor(elapsedTime / 60);
+      const seconds = elapsedTime % 60;
+      document.getElementById('timer').textContent = `Time: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function flipCard() {
+      if (lockBoard || this.classList.contains('flipped') || this.classList.contains('matched')) return;
+
+      this.textContent = this.dataset.symbol;
+      this.classList.add('flipped');
+
+      if (!firstCard) {
+        firstCard = this;
+      } else {
+        secondCard = this;
+        checkMatch();
+      }
+    }
+
+    function checkMatch() {
+      if (!firstCard || !secondCard) return;
+      lockBoard = true;
+
+      const isMatch = firstCard.dataset.symbol === secondCard.dataset.symbol;
+
+      setTimeout(() => {
+        if (isMatch) {
+          firstCard.classList.add('matched');
+          secondCard.classList.add('matched');
+        } else {
+          firstCard.classList.remove('flipped');
+          secondCard.classList.remove('flipped');
+          firstCard.textContent = '';
+          secondCard.textContent = '';
+          mistakeCount++;
+          document.getElementById('mistakes').textContent = `Mistakes: ${mistakeCount} / ${maxMistakes}`;
+          if (mistakeCount >= maxMistakes) {
+            alert("You lost! Too many mistakes.");
+            startGame();
+            return;
+          }
+        }
+
+        firstCard = null;
+        secondCard = null;
+        lockBoard = false;
+
+        if (document.querySelectorAll('.card.matched').length === cards.length) {
+          endGame();
+        }
+      }, 800);
+    }
+
+    function endGame() {
+      clearInterval(timerInterval);
+      const time = formatTime(elapsedTime);
+      bestTimes.push({ time, seconds: elapsedTime });
+      bestTimes.sort((a, b) => a.seconds - b.seconds);
+      bestTimes = bestTimes.slice(0, 5);
+      localStorage.setItem('bestTimes', JSON.stringify(bestTimes));
+      showLeaderboard();
+    }
+
+    function formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const secondsLeft = seconds % 60;
+      return `${String(minutes).padStart(2, '0')}:${String(secondsLeft).padStart(2, '0')}`;
+    }
+
+    function showLeaderboard() {
+      const leaderboardList = document.getElementById('leaderboard-list');
+      leaderboardList.innerHTML = '';
+      bestTimes.forEach((entry, index) => {
+        const li = document.createElement('li');
+        li.textContent = `#${index + 1}: ${entry.time}`;
+        leaderboardList.appendChild(li);
+      });
+    }
+
+    function peekCards() {
+      if (peekUsed) {
+        alert("You can only peek once per game!");
+        return;
+      }
+      peekUsed = true;
+      lockBoard = true;
+
+      cards.forEach(card => {
+        card.textContent = card.dataset.symbol;
+        card.classList.add('flipped');
+      });
+
+      setTimeout(() => {
+        cards.forEach(card => {
+          if (!card.classList.contains('matched')) {
+            card.classList.remove('flipped');
+            card.textContent = '';
+          }
+        });
+        lockBoard = false;
+      }, 3000);
+    }
+
+    startGame();
+  </script>
+</body>
+</html>

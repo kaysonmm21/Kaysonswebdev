@@ -1,0 +1,75 @@
+.Common{
+  text-align: center;
+  font-family: Arial, Helvetica, sans-serif
+}
+.header{
+  height: 200px;
+  background-image:linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),url(../assets/img/Densky.jpg);
+  color:aliceblue;
+  background-repeat: no-repeat;
+  background-size: cover;     /* or try '100% 100%' if needed */
+  background-position: center;
+  border-bottom: #333;
+  padding-top: 150px;  /* Adds padding at the top to move text down */
+  text-align: center;
+  font-size: larger;
+}
+
+  
+body{
+  background-color: #E5E5E5
+
+}
+/* .Footer{
+  background-color: aquamarine;
+  color:rgb(0, 0, 0);
+  position: fixed;
+  bottom:0px;
+  left: 1px;
+  right: 1px; 
+  padding-top: 15px;
+} */
+img{
+  display: block;
+  margin-left: 50px;
+  width:50% ;
+}
+nav{
+  background-color: #00338D;
+  padding: 10px;
+  overflow: hidden;
+}
+
+nav a{font-size: 16px;
+  font-weight: bold;
+  text-decoration: none;
+  color: #fbfbfb;
+  padding: 20px;
+}
+nav a:hover{text-decoration: underline;}
+
+.responsive-img {
+  max-width: 35%;
+  height: auto;
+  display: block;
+}
+
+.numbered{
+  font-weight: bold;
+
+}
+.text {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.graph {
+  z-index: 1;
+  padding-left: 50px;
+  width: 50%;
+
+}
+
+.left{
+  text-align: left;
+  margin-left: 50px;
+}
